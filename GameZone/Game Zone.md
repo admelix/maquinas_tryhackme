@@ -41,7 +41,8 @@ Para saber a qué nos enfrentamos, podemos usar el comando _PING_ e identificar 
 
 En esta tabla, tenemos la equivalencia de qué sistema podemos estar enfrentando en base a su TTL:
 
-![[Pasted image 20240720135430.png]]
+![Pasted image 20240720135430.png](./assets/Pasted image 20240720135430.png)
+
 
 Si aplicamos el comando ping: 
 
@@ -109,11 +110,11 @@ Nmap done: 1 IP address (1 host up) scanned in 18.49 seconds
 
 Como podemos ver, el resultado del escaneo, nos muestra en el puerto 22 esta descripcion: **Ubuntu 4ubuntu2.7** . Si buscamos en google por el resultado de launchpad.net nos encontramos con lo siguiente:
 
-![[Pasted image 20240720152601.png]]
+![Pasted image 20240720152601.png](./assets/Pasted image 20240720152601.png)
 Todas las versiones de ubuntu tienen un nombre. En nuestro caso es Xenial que equivale a la version 16.04 de ubuntu. 
 
 Tambien, si revisamos la version del ssh es vulnerable a la enumeracion de usuarios 
-![[Pasted image 20240720145926.png]]
+![Pasted image 20240720145926.png](./assets/Pasted image 20240720145926.png)
 
 Si vemos, el exploit que podemos utilizar es el 40136 de exploit-db de offsec. Como esta maquina es de aprendizaje de SQLI, no vamos a explorar mas en esto. Pero, siempre tenemos que enumerar todo y hacerlo costumbre de cara a certificaciones como eCPPT u OSCP que solicitan un reporte tecnico y esto, **es importante notificarlo al cliente para una futura subsanacion**
 
@@ -124,31 +125,31 @@ https://nvd.nist.gov/vuln/detail/CVE-2019-0211
 Pero, seguiremos con lo que nos esta solicitando tryhackme.  
 
 A medida que vamos avanzando en estas etapas de enumeracion. Debemos revisar que nos va pidiendo tryhackme para ir resolviendo la maquina. Aqui, esta la primera parte:
-![[Pasted image 20240720140227.png]]
+![Pasted image 20240720140227.png](./assets/Pasted image 20240720140227.png)
 la pregunta es: **What is the name of the large cartoon avatar holding a sniper on the forum?**
 Para responder esto, primero debemos entrar en la web y ver que es lo que nos muestra:
 
 Al entrar, es esto lo que podemos ver:
-![[Pasted image 20240720140423.png]]
+![Pasted image 20240720140423.png](./assets/Pasted image 20240720140423.png)
 
 Ahora, necesitamos saber el nombre de ese sujeto afirmando el arma. Para ello, podemos revisar el nombre de la imagen y quizas tenga el nombre del sujeto o lo podemos buscar con google images. Intentemos la primera opcion:
 
-![[Pasted image 20240720140903.png]]
+![Pasted image 20240720140903.png](./assets/Pasted image 20240720140903.png)
 
 Al intentar buscar nombres de las imagenes en la web, encontramos una carpeta que dice images/_image01.gif
 
 Por lo que se puede leer, no tenemos una descripcion exacta del nombre asi que ahora necesitamos descargar la imagen y buscarla con google images. 
-![[Pasted image 20240720141132.png]]
+![Pasted image 20240720141132.png](./assets/Pasted image 20240720141132.png)
 Si entramos a la carpeta images, vemos todas las imagenes que hay. Pero, la que nos interesa por ahora es : **images/header_image.png**
 
 La descargamos y vamos a Google Images para realizar la busqueda:
 
-![[Pasted image 20240720141409.png]]
+![Pasted image 20240720141409.png](./assets/Pasted image 20240720141409.png)
 Aqui podemos arrastrar la imagen en la url de images.google.com para hacer algun analisis de la misma. 
 
-![[Pasted image 20240720141548.png]]
+![Pasted image 20240720141548.png](./assets/Pasted image 20240720141548.png)
  Tenemos dos nombres. El primero es Hitman y el otro es Agent 47 y si nos devolvemos a la pregunta de tryhackme, veremos que nos ayuda al momento de ver el formato de la respuesta:
-![[Pasted image 20240720141659.png]]
+![Pasted image 20240720141659.png](./assets/Pasted image 20240720141659.png)
 
 vemos que es de dos espacios por ende, la respuesta es:  **Agent 47**
 
@@ -158,7 +159,7 @@ vemos que es de dos espacios por ende, la respuesta es:  **Agent 47**
 
 En la web, podemos ver que tenemos una seccion de login y de busqueda. Ambas nos pueden servir para realizar una inyeccion SQL asi que veremos como reacciona cada una a una inyeccion. 
 
-![[Pasted image 20240720155913.png]]
+![Pasted image 20240720155913.png](./assets/Pasted image 20240720155913.png)
 
 Si es por el lado del login, lo que debemos lograr es que al no saber la clave de un usuario, podamos comentar esa linea a traves de la inyeccion y lograr pasar el login. 
 
@@ -191,13 +192,13 @@ Ahora, por que usamos "or 1=1" ?  porque con eso manipulamos la consulta de tal 
 
 Veamos como aplicarlo:
 
-![[Pasted image 20240720163903.png]]
+![Pasted image 20240720163903.png](./assets/Pasted image 20240720163903.png)
 Aqui le di una clave porque es una buena practica. Por lo que dice tryhackme no es necesario ponersela. Pero, la mayoria de formularios siempre tienen una validacion simple y no es malo ponerla para que no nos salte alguna validacion y nos de problemas. 
 
 
 Le damos a enter y entramos a esta web:
 
-![[Pasted image 20240720163940.png]]
+![Pasted image 20240720163940.png](./assets/Pasted image 20240720163940.png)
 
 Respondemos la respuesta: **When you've logged in, what page do you get redirected to?**
 *portal.php*
@@ -211,7 +212,7 @@ SELECT * FROM productos WHERE nombre LIKE '%manzana%';
 
 Si buscamos  por hitman para ver que nos arroja, podemos ver lo siguiente:
 
-![[Pasted image 20240720164741.png]]
+![Pasted image 20240720164741.png](./assets/Pasted image 20240720164741.png)
 
 Podemos ver que hace una peticion post con un campo que se llama searchitem y ahi le pasa el parametro que buscamos.
 
@@ -224,7 +225,7 @@ si utilizo:
 ```
 
 la respuesta que obtengo es: 
-![[Pasted image 20240720165547.png]]
+![Pasted image 20240720165547.png](./assets/Pasted image 20240720165547.png)
 Dice que no conoce la columna y esto significa que la tabla no tiene 10 columnas. Otra cosa importante que estamos pasando por alto, es el tipo de vulnerabilidad que estamos explotando y es una inyeccion SQL basada en error. Saber esto es clave para posteriores payloads de **payloadallthethings** o para realizar busquedas por los errores que tengamos para conocer mas de la base de datos que estamos atacando.
 
 Este script nos ayuda a saber la cantidad de columnas que tenemos en la tabla de manera automatizada. 
@@ -273,7 +274,7 @@ if __name__=='__main__':
 
 La salida al ejecutar este script es la siguiente:
 
-![[Pasted image 20240720181243.png]]
+![Pasted image 20240720181243.png](./assets/Pasted image 20240720181243.png)
 
 Listo!, ya sabemos que la tabla tiene 3 columnas. Ahora, hay que ver cuales pueden ser inyectables y para eso vamos a utilizar un union select con los 3 campos e iremos reemplazando cada campo con un valor para ver cual es inyectable o no. 
 
@@ -285,7 +286,7 @@ Para ello haremos lo siguiente:
 
 Algunas veces podemos poner 1,2,3 o en este caso intente solo con null por cada campo. La respuesta es la siguiente:
 
-![[Pasted image 20240721014636.png]]
+![Pasted image 20240721014636.png](./assets/Pasted image 20240721014636.png)
 No hay ningun error y en consecuencia, podremos empezar a inyectar en los campos. Veamos la base de datos y su version:
 
 ```sql
@@ -294,7 +295,7 @@ No hay ningun error y en consecuencia, podremos empezar a inyectar en los campos
 
 Con esa consulta la salida es la siguiente:
 
-![[Pasted image 20240721014937.png]]
+![Pasted image 20240721014937.png](./assets/Pasted image 20240721014937.png)
 
 Podemos concluir que a partir del segundo campo es inyectable. Comprobemos:
 
@@ -304,11 +305,11 @@ Podemos concluir que a partir del segundo campo es inyectable. Comprobemos:
 
 Como podemos ver, ahora si tenemos una salida en ambos campos de la tabla. Entonces, veamos todas las bases de datos que pueda tener. 
 
-![[Pasted image 20240721015128.png]]
+![Pasted image 20240721015128.png](./assets/Pasted image 20240721015128.png)
 
 Si buscamos por la version de la base de datos en google, nos encontraremos con lo siguiente:
 
-![[Pasted image 20240721015340.png]]
+![Pasted image 20240721015340.png](./assets/Pasted image 20240721015340.png)
 Es una base de datos mysql 5.7 en ubuntu xenial. Ahora, continuemos viendo las tablas con los campos que tiene con el siguiente comando:
 
 ```sql
@@ -317,7 +318,7 @@ Es una base de datos mysql 5.7 en ubuntu xenial. Ahora, continuemos viendo las t
 
 esto nos arroja lo siguiente:
 
-![[Pasted image 20240721020748.png]]
+![Pasted image 20240721020748.png](./assets/Pasted image 20240721020748.png)
 
 vemos que existe la tabla **post** y **users** y podemos ver que la tabla que estamos revisando (post) tiene efectivamente 3 campos de los cuales 1 es numerico y es para el id y luego tenemos una tabla mas interesante que se llama users con un campo username y pwd. Veamos que tiene esa tabla users. 
 
@@ -325,13 +326,13 @@ vemos que existe la tabla **post** y **users** y podemos ver que la tabla que es
 ' UNION SELECT NULL, username, pwd FROM users -- -
 ```
 
-![[Pasted image 20240721021301.png]]
+![Pasted image 20240721021301.png](./assets/Pasted image 20240721021301.png)
 
 Nos muestra un nombre de usuario y un hash que parece ser sha-256. veamos si podemos crackearlo de forma simple en **crackstation**
 
 si entramos a esta web: https://crackstation.net/ podremos ver este resultado al momento de poner el hash:
 
-![[Pasted image 20240721021657.png]]
+![Pasted image 20240721021657.png](./assets/Pasted image 20240721021657.png)
 
 Como podemos ver, si pudimos romper ese hash y tenemos nuestra clave. Pero, si queremos hacerlo con john y rockyou  debemos utilizar los siguientes comandos:
 
@@ -361,7 +362,7 @@ Tenemos las credenciales agent47:videogamer124
 
 Ahora podemos responder estas preguntas: 
 
-![[Pasted image 20240721023320.png]]
+![Pasted image 20240721023320.png](./assets/Pasted image 20240721023320.png)
 
 ahora que ya tenemos credenciales, probemos si esas nos serviran en el ssh que tienen abierto:
 
@@ -369,7 +370,7 @@ ahora que ya tenemos credenciales, probemos si esas nos serviran en el ssh que t
 ssh agent47@10.10.144.74
 ```
 
-![[Pasted image 20240721023955.png]]
+![Pasted image 20240721023955.png](./assets/Pasted image 20240721023955.png)
 Las credenciales nos sirvieron. Pero, si tenemos una inyeccion sql y no tenemos ssh. Podriamos obtener una shell con esa inyeccion? 
 
 La respuesta es si y al saber que se tiene un servidor apache y que tenemos php disponible, podemos subir un cmd y ejecutarlo desde nuestro navegador y luego transformarlo en una shell. 
@@ -382,7 +383,7 @@ Veamoslo:
 
 esto, nos dice lo siguiente:
 
-![[Pasted image 20240721024917.png]]
+![Pasted image 20240721024917.png](./assets/Pasted image 20240721024917.png)
 
 Existe una restriccion para obtener una shell de esta manera y por lo tanto seguiremos el camino que ya conseguimos con el ssh. Eso si,  somos root en la base de datos por ende, podriamos jugar con los privilegios y otras cosas para empezar a leer archivos e investigar mas. Pero, por ahora seguiremos con el ssh. 
 
@@ -458,7 +459,7 @@ Linux gamezone 4.4.0-159-generic #187-Ubuntu SMP Thu Aug 1 16:28:06 UTC 2019 x86
 
 la version me dice que si hay exploits disponibles veamos que nos dice searchsploit:
 
-![[Pasted image 20240721031853.png]]
+![Pasted image 20240721031853.png](./assets/Pasted image 20240721031853.png)
 
 Se puede ver que si hay disponibles pero no para nuestra version exacta. El problema de ejecutar exploits para elevar privilegios con el kernel, es que las maquinas se cuelgan al ejecutarlo y es algo muy agresivo si es que no lo probamos de forma local antes de ejecutarlo en remoto. Pero, tenemos la informacion de que nuestro kernel si puede ser vulnerable si adaptamos alguno de estos exploits que mas se nos acerquen. 
 
@@ -655,14 +656,14 @@ Esto significa que en nuestra maquina en el puerto 80 veremos lo que hay en el p
 
 esto es lo que vemos:
 
-![[Pasted image 20240721043150.png]]
+![Pasted image 20240721043150.png](./assets/Pasted image 20240721043150.png)
 
 si usamos las credenciales del ssh, podemos entrar aqui:
-![[Pasted image 20240721043328.png]]
+![Pasted image 20240721043328.png](./assets/Pasted image 20240721043328.png)
 
 Con esto ya podemos responder las preguntas de la exposicion del servicio:
 
-![[Pasted image 20240721043603.png]]
+![Pasted image 20240721043603.png](./assets/Pasted image 20240721043603.png)
 
 ahora nos falta escalar privilegios. Para ello, debemos revisar la version de este webmin y ver que nos trae. 
 
@@ -861,9 +862,9 @@ Con esto, tenemos una bash totalmente funcional que al momento de presionar CTRL
 # Trophy & Loot
 user.txt:
 
-![[Pasted image 20240721050730.png]]
+![Pasted image 20240721050730.png](./assets/Pasted image 20240721050730.png)
 
 
 root.txt: 
 
-![[Pasted image 20240721050628.png]]
+![Pasted image 20240721050628.png](./assets/Pasted image 20240721050628.png)
